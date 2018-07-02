@@ -31,7 +31,6 @@ func TestRenter(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// Create a group for the subtests
 	groupParams := siatest.GroupParams{
@@ -323,7 +322,6 @@ func testRenterRemoteRepair(t *testing.T, tg *siatest.TestGroup) {
 // with a dependency that interrupts the download before sending the signed
 // revision to the host.
 func TestDownloadInterruptedBeforeSendingRevision(t *testing.T) {
-	t.Parallel()
 	testDownloadInterrupted(t, newDependencyInterruptDownloadBeforeSendingRevision())
 }
 
@@ -331,7 +329,6 @@ func TestDownloadInterruptedBeforeSendingRevision(t *testing.T) {
 // with a dependency that interrupts the download after sending the signed
 // revision to the host.
 func TestDownloadInterruptedAfterSendingRevision(t *testing.T) {
-	t.Parallel()
 	testDownloadInterrupted(t, newDependencyInterruptDownloadAfterSendingRevision())
 }
 
@@ -339,7 +336,6 @@ func TestDownloadInterruptedAfterSendingRevision(t *testing.T) {
 // dependency that interrupts the upload before sending the signed revision to
 // the host.
 func TestUploadInterruptedBeforeSendingRevision(t *testing.T) {
-	t.Parallel()
 	testUploadInterrupted(t, newDependencyInterruptUploadBeforeSendingRevision())
 }
 
@@ -347,7 +343,6 @@ func TestUploadInterruptedBeforeSendingRevision(t *testing.T) {
 // dependency that interrupts the upload after sending the signed revision to
 // the host.
 func TestUploadInterruptedAfterSendingRevision(t *testing.T) {
-	t.Parallel()
 	testUploadInterrupted(t, newDependencyInterruptUploadAfterSendingRevision())
 }
 
@@ -1464,29 +1459,29 @@ func checkBalanceVsSpending(r *siatest.TestNode, initialBalance types.Currency) 
 }
 
 // checkContracts confirms that contracts are renewed as expected
-func checkContracts(numHosts, numRenewals int, ExpiredContracts, renewedContracts []api.RenterContract) error {
+func checkContracts(numHosts, numRenewals int, expiredContracts, renewedContracts []api.RenterContract) error {
 	if len(renewedContracts) != numHosts {
 		err := fmt.Sprintf("Incorrect number of Active contracts: have %v expected %v", len(renewedContracts), numHosts)
 		return errors.New(err)
 	}
-	if len(ExpiredContracts) == 0 && numRenewals == 0 {
+	if len(expiredContracts) == 0 && numRenewals == 0 {
 		return nil
 	}
 	// Confirm contracts were renewed, this will also mean there are old contracts
-	// Verify there are not more renewedContracts than there are ExpiredContracts
+	// Verify there are not more renewedContracts than there are expiredContracts
 	// This would mean contracts are not getting archived
-	if len(ExpiredContracts) < len(renewedContracts) {
+	if len(expiredContracts) < len(renewedContracts) {
 		return errors.New("Too many renewed contracts")
 	}
-	if len(ExpiredContracts) != numHosts*numRenewals {
-		err := fmt.Sprintf("Incorrect number of Old contracts: have %v expected %v", len(ExpiredContracts), numHosts*numRenewals)
+	if len(expiredContracts) != numHosts*numRenewals {
+		err := fmt.Sprintf("Incorrect number of Old contracts: have %v expected %v", len(expiredContracts), numHosts*numRenewals)
 		return errors.New(err)
 	}
 
 	// Create Maps for comparison
 	initialContractIDMap := make(map[types.FileContractID]struct{})
 	initialContractKeyMap := make(map[crypto.Hash]struct{})
-	for _, c := range ExpiredContracts {
+	for _, c := range expiredContracts {
 		initialContractIDMap[c.ID] = struct{}{}
 		initialContractKeyMap[crypto.HashBytes(c.HostPublicKey.Key)] = struct{}{}
 	}
@@ -1496,12 +1491,12 @@ func checkContracts(numHosts, numRenewals int, ExpiredContracts, renewedContract
 		// were renewed
 		if c.GoodForRenew {
 			if _, ok := initialContractIDMap[c.ID]; ok {
-				return errors.New("ID from renewedContracts found in ExpiredContracts")
+				return errors.New("ID from renewedContracts found in expiredContracts")
 			}
 			// Verifying that Renewed Contracts have the same HostPublicKey
 			// as an initial contract
 			if _, ok := initialContractKeyMap[crypto.HashBytes(c.HostPublicKey.Key)]; !ok {
-				return errors.New("Host Public Key from renewedContracts not found in ExpiredContracts")
+				return errors.New("Host Public Key from renewedContracts not found in expiredContracts")
 			}
 		}
 	}
@@ -1527,7 +1522,7 @@ func checkRenewedContracts(renewedContracts []api.RenterContract) error {
 
 // checkContractVsReportedSpending confirms that the spending recorded in
 // the renter's contracts matches the reported spending for the renter
-func checkContractVsReportedSpending(r *siatest.TestNode, WindowSize types.BlockHeight, ExpiredContracts, renewedContracts []api.RenterContract) error {
+func checkContractVsReportedSpending(r *siatest.TestNode, WindowSize types.BlockHeight, expiredContracts, renewedContracts []api.RenterContract) error {
 	// Get Current BlockHeight
 	cg, err := r.ConsensusGet()
 	if err != nil {
@@ -1558,7 +1553,7 @@ func checkContractVsReportedSpending(r *siatest.TestNode, WindowSize types.Block
 
 	// Check renter financial metrics against contract spending
 	var spending modules.ContractorSpending
-	for _, contract := range ExpiredContracts {
+	for _, contract := range expiredContracts {
 		if contract.StartHeight >= rg.CurrentPeriod {
 			// Calculate ContractFees
 			spending.ContractFees = spending.ContractFees.Add(contract.Fees)
@@ -2120,10 +2115,10 @@ func TestRenterExpiredContracts(t *testing.T) {
 	}
 
 	// Record old contracts and current contracts that are good for renew
-	ExpiredContracts := rc.ExpiredContracts
+	expiredContracts := rc.ExpiredContracts
 	for _, c := range rc.Contracts {
 		if c.GoodForRenew {
-			ExpiredContracts = append(ExpiredContracts, c)
+			expiredContracts = append(expiredContracts, c)
 		}
 	}
 
@@ -2145,13 +2140,13 @@ func TestRenterExpiredContracts(t *testing.T) {
 			return errors.AddContext(err, "could not get contracts")
 		}
 		// Check ExpiredContracts against recorded old contracts
-		if len(ExpiredContracts) != len(rc.ExpiredContracts) {
-			return errors.New(fmt.Sprintf("Number of old contracts don't match, expected %v got %v", len(ExpiredContracts), len(rc.ExpiredContracts)))
+		if len(expiredContracts) != len(rc.ExpiredContracts) {
+			return errors.New(fmt.Sprintf("Number of old contracts don't match, expected %v got %v", len(expiredContracts), len(rc.ExpiredContracts)))
 		}
 
 		// Create Maps for comparison
 		initialContractIDMap := make(map[types.FileContractID]struct{})
-		for _, c := range ExpiredContracts {
+		for _, c := range expiredContracts {
 			initialContractIDMap[c.ID] = struct{}{}
 		}
 
@@ -2159,7 +2154,7 @@ func TestRenterExpiredContracts(t *testing.T) {
 			// Verify that all the contracts marked as GoodForRenew
 			// were renewed
 			if _, ok := initialContractIDMap[c.ID]; !ok {
-				return errors.New("ID from rc.ExpiredContracts not found in ExpiredContracts")
+				return errors.New("ID from rc.ExpiredContracts not found in expiredContracts")
 			}
 		}
 		return nil
